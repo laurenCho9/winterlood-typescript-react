@@ -1,4 +1,10 @@
-import { useEffect, useReducer, useRef, useState } from "react";
+import React, {
+  useContext,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import "./App.css";
 import Editor from "./components/Editor";
 import { Todo } from "./types";
@@ -24,6 +30,19 @@ function reducer(state: Todo[], action: Action) {
       return state.filter((it) => it.id !== action.id);
     }
   }
+}
+
+export const TodoStateContext = React.createContext<Todo[] | null>(null);
+export const TodoDispatchContext = React.createContext<{
+  onClickAdd: (text: string) => void;
+  onClickDelete: (id: number) => void;
+} | null>(null);
+
+// Editor 컴포넌트에서 바로 useContext API를 불러오면 | null 값이 나올 수도 있는데 ?.옵셔널체이닝으로 당장 해결은 가능하겠지만 규모가 커지면 좋은 방법은 아닐 것이기에 아래 커스텀훅을 만들어 조건문을 적용해서 null이 아닐 때 리턴, null이면 에러송출 하는 식으로 변경하여 Editor에서는 해당 커스텀훅을 불러와 옵셔널체이닝을 안써도 되게끔 작업
+export function useTodoDispatch() {
+  const dispatch = useContext(TodoDispatchContext);
+  if (!dispatch) throw new Error("TodoDispatchContext에 문제가 있다");
+  return dispatch;
 }
 
 function App() {
@@ -55,12 +74,16 @@ function App() {
   return (
     <div className="App">
       <h1>Todo</h1>
-      <Editor onClickAdd={onClickAdd} />
-      <div>
-        {todos.map((todo) => (
-          <TodoItem key={todo.id} {...todo} onClickDelete={onClickDelete} />
-        ))}
-      </div>
+      <TodoStateContext.Provider value={todos}>
+        <TodoDispatchContext.Provider value={{ onClickAdd, onClickDelete }}>
+          <Editor />
+          <div>
+            {todos.map((todo) => (
+              <TodoItem key={todo.id} {...todo} />
+            ))}
+          </div>
+        </TodoDispatchContext.Provider>
+      </TodoStateContext.Provider>
     </div>
   );
 }
